@@ -4,9 +4,9 @@
   "codeowners": ["@k3mpaxl"],
   "config_flow": true,
   "documentation": "https://github.com/k3mpaxl/connectbox_integration",
-  "issue_tracker": "https://github.com/k3mpaxl/connectbox_integration/issues",
   "integration_type": "device",
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/k3mpaxl/connectbox_integration/issues",
   "quality_scale": "platinum",
   "requirements": [],
   "version": "1.0.0"
