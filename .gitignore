@@ -37,7 +37,9 @@ package.json
 har_files/
 test_aiohttp.py
 test_login.py
-*.png
+/screenshots/
+*.har
+Bildschirmfoto*
 
 # Reference / template code
 integration_blueprint/
