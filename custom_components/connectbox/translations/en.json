@@ -1,0 +1,84 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connectbox",
+        "description": "Enter the IP address and password of your Connectbox cable modem.",
+        "data": {
+          "host": "Host",
+          "password": "Password"
+        },
+        "data_description": {
+          "host": "IP address of the Connectbox modem (usually 192.168.100.1).",
+          "password": "Admin password found on the modem's label or set via the web interface."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Connectbox",
+        "description": "The password for your Connectbox has changed. Please enter the new password.",
+        "data": {
+          "password": "Password"
+        },
+        "data_description": {
+          "password": "The new admin password for the Connectbox."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Connectbox",
+        "description": "Update the connection settings for your Connectbox.",
+        "data": {
+          "host": "Host",
+          "password": "Password"
+        },
+        "data_description": {
+          "host": "IP address of the Connectbox modem.",
+          "password": "Admin password for the Connectbox."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "Device is already configured",
+      "reauth_successful": "Re-authentication was successful",
+      "reconfigure_successful": "Re-configuration was successful"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Update interval (seconds)"
+        },
+        "data_description": {
+          "scan_interval": "How often to poll the modem for new data (30–3600 seconds)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "operational_status": {
+        "name": "Operational status"
+      },
+      "channel_power": {
+        "name": "{prefix} channel {channel_id} power"
+      },
+      "channel_frequency": {
+        "name": "{prefix} channel {channel_id} frequency"
+      },
+      "channel_snr": {
+        "name": "{prefix} channel {channel_id} SNR"
+      },
+      "channel_modulation": {
+        "name": "{prefix} channel {channel_id} modulation"
+      },
+      "channel_locked": {
+        "name": "{prefix} channel {channel_id} lock status"
+      }
+    }
+  }
+}

@@ -1,0 +1,243 @@
+# Connectbox DOCSIS Monitor — Signal Monitor Dashboard
+#
+# Detailed signal quality monitoring with gauges and trend graphs.
+# Adjust entity IDs and channel numbers to your modem.
+
+title: Connectbox Signal Monitor
+views:
+  - title: Signal Quality
+    path: signal-quality
+    icon: mdi:signal
+    type: sections
+    sections:
+      # ── Status ──────────────────────────────────────────────
+      - title: Connection Status
+        type: grid
+        cards:
+          - type: entities
+            title: Connectbox
+            entities:
+              - entity: sensor.connectbox_operational_status
+                name: DOCSIS Status
+
+      # ── DS Power Gauges ─────────────────────────────────────
+      - title: Downstream Power Levels
+        type: grid
+        cards:
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_1_power
+            name: "DS 1"
+            unit: "dBmV"
+            min: -15
+            max: 15
+            severity:
+              green: -7
+              yellow: -12
+              red: -15
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_2_power
+            name: "DS 2"
+            unit: "dBmV"
+            min: -15
+            max: 15
+            severity:
+              green: -7
+              yellow: -12
+              red: -15
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_3_power
+            name: "DS 3"
+            unit: "dBmV"
+            min: -15
+            max: 15
+            severity:
+              green: -7
+              yellow: -12
+              red: -15
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_4_power
+            name: "DS 4"
+            unit: "dBmV"
+            min: -15
+            max: 15
+            severity:
+              green: -7
+              yellow: -12
+              red: -15
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_5_power
+            name: "DS 5"
+            unit: "dBmV"
+            min: -15
+            max: 15
+            severity:
+              green: -7
+              yellow: -12
+              red: -15
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_6_power
+            name: "DS 6"
+            unit: "dBmV"
+            min: -15
+            max: 15
+            severity:
+              green: -7
+              yellow: -12
+              red: -15
+
+      # ── DS SNR Gauges ───────────────────────────────────────
+      - title: Downstream SNR
+        type: grid
+        cards:
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_1_snr
+            name: "DS 1"
+            unit: "dB"
+            min: 20
+            max: 50
+            severity:
+              green: 33
+              yellow: 27
+              red: 20
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_2_snr
+            name: "DS 2"
+            unit: "dB"
+            min: 20
+            max: 50
+            severity:
+              green: 33
+              yellow: 27
+              red: 20
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_3_snr
+            name: "DS 3"
+            unit: "dB"
+            min: 20
+            max: 50
+            severity:
+              green: 33
+              yellow: 27
+              red: 20
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_4_snr
+            name: "DS 4"
+            unit: "dB"
+            min: 20
+            max: 50
+            severity:
+              green: 33
+              yellow: 27
+              red: 20
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_5_snr
+            name: "DS 5"
+            unit: "dB"
+            min: 20
+            max: 50
+            severity:
+              green: 33
+              yellow: 27
+              red: 20
+          - type: gauge
+            entity: sensor.connectbox_ds_channel_6_snr
+            name: "DS 6"
+            unit: "dB"
+            min: 20
+            max: 50
+            severity:
+              green: 33
+              yellow: 27
+              red: 20
+
+      # ── US Power Gauges ─────────────────────────────────────
+      - title: Upstream Power Levels
+        type: grid
+        cards:
+          - type: gauge
+            entity: sensor.connectbox_us_channel_9_power
+            name: "US 9"
+            unit: "dBmV"
+            min: 30
+            max: 55
+            severity:
+              green: 35
+              yellow: 48
+              red: 52
+          - type: gauge
+            entity: sensor.connectbox_us_channel_10_power
+            name: "US 10"
+            unit: "dBmV"
+            min: 30
+            max: 55
+            severity:
+              green: 35
+              yellow: 48
+              red: 52
+          - type: gauge
+            entity: sensor.connectbox_us_channel_11_power
+            name: "US 11"
+            unit: "dBmV"
+            min: 30
+            max: 55
+            severity:
+              green: 35
+              yellow: 48
+              red: 52
+          - type: gauge
+            entity: sensor.connectbox_us_channel_12_power
+            name: "US 12"
+            unit: "dBmV"
+            min: 30
+            max: 55
+            severity:
+              green: 35
+              yellow: 48
+              red: 52
+          - type: gauge
+            entity: sensor.connectbox_us_channel_ofdma_43_power
+            name: "OFDMA 43"
+            unit: "dBmV"
+            min: 30
+            max: 55
+            severity:
+              green: 35
+              yellow: 48
+              red: 52
+
+      # ── Trend Graphs ────────────────────────────────────────
+      - title: Signal Trends (24h)
+        type: grid
+        cards:
+          - type: history-graph
+            title: DS Power Trend
+            hours_to_show: 24
+            entities:
+              - entity: sensor.connectbox_ds_channel_1_power
+                name: "CH 1"
+              - entity: sensor.connectbox_ds_channel_15_power
+                name: "CH 15"
+              - entity: sensor.connectbox_ds_channel_ofdm_193_power
+                name: "OFDM 193"
+
+          - type: history-graph
+            title: DS SNR Trend
+            hours_to_show: 24
+            entities:
+              - entity: sensor.connectbox_ds_channel_1_snr
+                name: "CH 1"
+              - entity: sensor.connectbox_ds_channel_15_snr
+                name: "CH 15"
+              - entity: sensor.connectbox_ds_channel_ofdm_193_snr
+                name: "OFDM 193"
+
+          - type: history-graph
+            title: US Power Trend
+            hours_to_show: 24
+            entities:
+              - entity: sensor.connectbox_us_channel_9_power
+                name: "CH 9"
+              - entity: sensor.connectbox_us_channel_10_power
+                name: "CH 10"
+              - entity: sensor.connectbox_us_channel_ofdma_43_power
+                name: "OFDMA 43"

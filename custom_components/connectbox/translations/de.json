@@ -1,0 +1,84 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connectbox",
+        "description": "Gib die IP-Adresse und das Passwort deines Connectbox Kabelmodems ein.",
+        "data": {
+          "host": "Host",
+          "password": "Passwort"
+        },
+        "data_description": {
+          "host": "IP-Adresse des Connectbox-Modems (normalerweise 192.168.100.1).",
+          "password": "Admin-Passwort vom Aufkleber des Modems oder über die Weboberfläche gesetzt."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Connectbox erneut authentifizieren",
+        "description": "Das Passwort deiner Connectbox hat sich geändert. Bitte gib das neue Passwort ein.",
+        "data": {
+          "password": "Passwort"
+        },
+        "data_description": {
+          "password": "Das neue Admin-Passwort für die Connectbox."
+        }
+      },
+      "reconfigure": {
+        "title": "Connectbox neu konfigurieren",
+        "description": "Aktualisiere die Verbindungseinstellungen deiner Connectbox.",
+        "data": {
+          "host": "Host",
+          "password": "Passwort"
+        },
+        "data_description": {
+          "host": "IP-Adresse des Connectbox-Modems.",
+          "password": "Admin-Passwort für die Connectbox."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung fehlgeschlagen",
+      "invalid_auth": "Ungültige Authentifizierung",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "abort": {
+      "already_configured": "Gerät ist bereits konfiguriert",
+      "reauth_successful": "Erneute Authentifizierung war erfolgreich",
+      "reconfigure_successful": "Neukonfiguration war erfolgreich"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Aktualisierungsintervall (Sekunden)"
+        },
+        "data_description": {
+          "scan_interval": "Wie oft das Modem nach neuen Daten abgefragt wird (30–3600 Sekunden)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "operational_status": {
+        "name": "Betriebsstatus"
+      },
+      "channel_power": {
+        "name": "{prefix} Kanal {channel_id} Leistung"
+      },
+      "channel_frequency": {
+        "name": "{prefix} Kanal {channel_id} Frequenz"
+      },
+      "channel_snr": {
+        "name": "{prefix} Kanal {channel_id} SNR"
+      },
+      "channel_modulation": {
+        "name": "{prefix} Kanal {channel_id} Modulation"
+      },
+      "channel_locked": {
+        "name": "{prefix} Kanal {channel_id} Sperrstatus"
+      }
+    }
+  }
+}

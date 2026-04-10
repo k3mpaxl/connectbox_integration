@@ -1,0 +1,152 @@
+# Connectbox DOCSIS Monitor — Channel Table Dashboard
+#
+# Mimics the modem's own web interface with a table-style view
+# showing all channel details at a glance.
+# Adjust entity IDs and channel numbers to your modem.
+
+title: Connectbox Channels
+views:
+  - title: Downstream
+    path: downstream
+    icon: mdi:arrow-down-bold
+    type: sections
+    sections:
+      - title: DOCSIS Status
+        type: grid
+        cards:
+          - type: entity
+            entity: sensor.connectbox_operational_status
+            name: Operational Status
+
+      - title: "SC-QAM Downstream (Channels 1–24)"
+        type: grid
+        cards:
+          - type: entities
+            title: "Channels 1–8"
+            show_header_toggle: false
+            entities:
+              - entity: sensor.connectbox_ds_channel_1_power
+                name: "CH 1 Power"
+              - entity: sensor.connectbox_ds_channel_1_frequency
+                name: "CH 1 Freq"
+                secondary_info: none
+              - entity: sensor.connectbox_ds_channel_1_snr
+                name: "CH 1 SNR"
+              - type: divider
+              - entity: sensor.connectbox_ds_channel_2_power
+                name: "CH 2 Power"
+              - entity: sensor.connectbox_ds_channel_2_frequency
+                name: "CH 2 Freq"
+              - entity: sensor.connectbox_ds_channel_2_snr
+                name: "CH 2 SNR"
+              - type: divider
+              - entity: sensor.connectbox_ds_channel_3_power
+                name: "CH 3 Power"
+              - entity: sensor.connectbox_ds_channel_3_frequency
+                name: "CH 3 Freq"
+              - entity: sensor.connectbox_ds_channel_3_snr
+                name: "CH 3 SNR"
+              - type: divider
+              - entity: sensor.connectbox_ds_channel_4_power
+                name: "CH 4 Power"
+              - entity: sensor.connectbox_ds_channel_4_frequency
+                name: "CH 4 Freq"
+              - entity: sensor.connectbox_ds_channel_4_snr
+                name: "CH 4 SNR"
+
+          - type: entities
+            title: "Channels 5–8"
+            show_header_toggle: false
+            entities:
+              - entity: sensor.connectbox_ds_channel_5_power
+                name: "CH 5 Power"
+              - entity: sensor.connectbox_ds_channel_5_frequency
+                name: "CH 5 Freq"
+              - entity: sensor.connectbox_ds_channel_5_snr
+                name: "CH 5 SNR"
+              - type: divider
+              - entity: sensor.connectbox_ds_channel_6_power
+                name: "CH 6 Power"
+              - entity: sensor.connectbox_ds_channel_6_frequency
+                name: "CH 6 Freq"
+              - entity: sensor.connectbox_ds_channel_6_snr
+                name: "CH 6 SNR"
+              - type: divider
+              - entity: sensor.connectbox_ds_channel_7_power
+                name: "CH 7 Power"
+              - entity: sensor.connectbox_ds_channel_7_frequency
+                name: "CH 7 Freq"
+              - entity: sensor.connectbox_ds_channel_7_snr
+                name: "CH 7 SNR"
+              - type: divider
+              - entity: sensor.connectbox_ds_channel_8_power
+                name: "CH 8 Power"
+              - entity: sensor.connectbox_ds_channel_8_frequency
+                name: "CH 8 Freq"
+              - entity: sensor.connectbox_ds_channel_8_snr
+                name: "CH 8 SNR"
+
+      - title: "OFDM Downstream"
+        type: grid
+        cards:
+          - type: entities
+            title: "OFDM Channels"
+            show_header_toggle: false
+            entities:
+              - entity: sensor.connectbox_ds_channel_ofdm_193_power
+                name: "OFDM 193 Power"
+              - entity: sensor.connectbox_ds_channel_ofdm_193_frequency
+                name: "OFDM 193 Freq"
+              - entity: sensor.connectbox_ds_channel_ofdm_193_snr
+                name: "OFDM 193 SNR"
+              - type: divider
+              - entity: sensor.connectbox_ds_channel_ofdm_194_power
+                name: "OFDM 194 Power"
+              - entity: sensor.connectbox_ds_channel_ofdm_194_frequency
+                name: "OFDM 194 Freq"
+              - entity: sensor.connectbox_ds_channel_ofdm_194_snr
+                name: "OFDM 194 SNR"
+
+  - title: Upstream
+    path: upstream
+    icon: mdi:arrow-up-bold
+    type: sections
+    sections:
+      - title: "SC-QAM Upstream"
+        type: grid
+        cards:
+          - type: entities
+            title: "Upstream Channels"
+            show_header_toggle: false
+            entities:
+              - entity: sensor.connectbox_us_channel_9_power
+                name: "CH 9 Power"
+              - entity: sensor.connectbox_us_channel_9_frequency
+                name: "CH 9 Freq"
+              - type: divider
+              - entity: sensor.connectbox_us_channel_10_power
+                name: "CH 10 Power"
+              - entity: sensor.connectbox_us_channel_10_frequency
+                name: "CH 10 Freq"
+              - type: divider
+              - entity: sensor.connectbox_us_channel_11_power
+                name: "CH 11 Power"
+              - entity: sensor.connectbox_us_channel_11_frequency
+                name: "CH 11 Freq"
+              - type: divider
+              - entity: sensor.connectbox_us_channel_12_power
+                name: "CH 12 Power"
+              - entity: sensor.connectbox_us_channel_12_frequency
+                name: "CH 12 Freq"
+
+      - title: "OFDMA Upstream"
+        type: grid
+        cards:
+          - type: entities
+            title: "OFDMA Channels"
+            show_header_toggle: false
+            entities:
+              - entity: sensor.connectbox_us_channel_ofdma_43_power
+                name: "OFDMA 43 Power"
+              - entity: sensor.connectbox_us_channel_ofdma_43_frequency
+                name: "OFDMA 43 Freq"

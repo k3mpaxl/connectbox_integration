@@ -1,0 +1,24 @@
+{
+  "entity": {
+    "sensor": {
+      "operational_status": {
+        "default": "mdi:router-network"
+      },
+      "channel_power": {
+        "default": "mdi:signal"
+      },
+      "channel_frequency": {
+        "default": "mdi:sine-wave"
+      },
+      "channel_snr": {
+        "default": "mdi:signal-cellular-3"
+      },
+      "channel_modulation": {
+        "default": "mdi:waveform"
+      },
+      "channel_locked": {
+        "default": "mdi:lock-outline"
+      }
+    }
+  }
+}

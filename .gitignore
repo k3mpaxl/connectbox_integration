@@ -1,0 +1,43 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+pythonenv*
+.python-version
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# HA dev instance
+ha_config/
+docker-compose.yml
+node_modules/
+package-lock.json
+package.json
+
+# Dev files
+har_files/
+test_aiohttp.py
+test_login.py
+*.png
+
+# Reference / template code
+integration_blueprint/

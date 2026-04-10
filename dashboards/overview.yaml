@@ -1,0 +1,111 @@
+# Connectbox DOCSIS Monitor — Overview Dashboard
+#
+# Entity IDs shown here use ENGLISH names.
+# If your HA is set to German, replace:
+#   channel → kanal, power → leistung, frequency → frequenz,
+#   snr → snr, operational_status → betriebsstatus
+#
+# Adjust channel numbers (1–24, OFDM-193, etc.) to match your modem.
+
+title: Connectbox
+views:
+  - title: Overview
+    path: overview
+    icon: mdi:router-network
+    type: sections
+    sections:
+      # ── Status ──────────────────────────────────────────────
+      - title: Status
+        type: grid
+        cards:
+          - type: entity
+            entity: sensor.connectbox_operational_status
+            name: DOCSIS Status
+            icon: mdi:router-network
+
+      # ── Downstream Power ────────────────────────────────────
+      - title: Downstream Power (dBmV)
+        type: grid
+        cards:
+          - type: history-graph
+            title: SC-QAM Channels (24h)
+            hours_to_show: 24
+            entities:
+              - entity: sensor.connectbox_ds_channel_1_power
+                name: "CH 1"
+              - entity: sensor.connectbox_ds_channel_2_power
+                name: "CH 2"
+              - entity: sensor.connectbox_ds_channel_3_power
+                name: "CH 3"
+              - entity: sensor.connectbox_ds_channel_4_power
+                name: "CH 4"
+              - entity: sensor.connectbox_ds_channel_5_power
+                name: "CH 5"
+              - entity: sensor.connectbox_ds_channel_6_power
+                name: "CH 6"
+              - entity: sensor.connectbox_ds_channel_7_power
+                name: "CH 7"
+              - entity: sensor.connectbox_ds_channel_8_power
+                name: "CH 8"
+
+          - type: history-graph
+            title: OFDM Channels (24h)
+            hours_to_show: 24
+            entities:
+              - entity: sensor.connectbox_ds_channel_ofdm_193_power
+                name: "OFDM 193"
+              - entity: sensor.connectbox_ds_channel_ofdm_194_power
+                name: "OFDM 194"
+
+      # ── Downstream SNR ──────────────────────────────────────
+      - title: Downstream SNR (dB)
+        type: grid
+        cards:
+          - type: history-graph
+            title: SC-QAM SNR (24h)
+            hours_to_show: 24
+            entities:
+              - entity: sensor.connectbox_ds_channel_1_snr
+                name: "CH 1"
+              - entity: sensor.connectbox_ds_channel_2_snr
+                name: "CH 2"
+              - entity: sensor.connectbox_ds_channel_3_snr
+                name: "CH 3"
+              - entity: sensor.connectbox_ds_channel_4_snr
+                name: "CH 4"
+              - entity: sensor.connectbox_ds_channel_5_snr
+                name: "CH 5"
+              - entity: sensor.connectbox_ds_channel_6_snr
+                name: "CH 6"
+              - entity: sensor.connectbox_ds_channel_7_snr
+                name: "CH 7"
+              - entity: sensor.connectbox_ds_channel_8_snr
+                name: "CH 8"
+
+          - type: history-graph
+            title: OFDM SNR (24h)
+            hours_to_show: 24
+            entities:
+              - entity: sensor.connectbox_ds_channel_ofdm_193_snr
+                name: "OFDM 193"
+              - entity: sensor.connectbox_ds_channel_ofdm_194_snr
+                name: "OFDM 194"
+
+      # ── Upstream Power ──────────────────────────────────────
+      - title: Upstream Power (dBmV)
+        type: grid
+        cards:
+          - type: history-graph
+            title: Upstream (24h)
+            hours_to_show: 24
+            entities:
+              - entity: sensor.connectbox_us_channel_9_power
+                name: "CH 9"
+              - entity: sensor.connectbox_us_channel_10_power
+                name: "CH 10"
+              - entity: sensor.connectbox_us_channel_11_power
+                name: "CH 11"
+              - entity: sensor.connectbox_us_channel_12_power
+                name: "CH 12"
+              - entity: sensor.connectbox_us_channel_ofdma_43_power
+                name: "OFDMA 43"

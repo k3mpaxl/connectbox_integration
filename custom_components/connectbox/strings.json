@@ -1,0 +1,92 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connectbox",
+        "description": "Enter the IP address and password of your Connectbox cable modem.",
+        "data": {
+          "host": "[%key:common::config_flow::data::host%]",
+          "password": "[%key:common::config_flow::data::password%]"
+        },
+        "data_description": {
+          "host": "IP address of the Connectbox modem (usually 192.168.100.1).",
+          "password": "Admin password found on the modem's label or set via the web interface."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Connectbox",
+        "description": "The password for your Connectbox has changed. Please enter the new password.",
+        "data": {
+          "password": "[%key:common::config_flow::data::password%]"
+        },
+        "data_description": {
+          "password": "The new admin password for the Connectbox."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Connectbox",
+        "description": "Update the connection settings for your Connectbox.",
+        "data": {
+          "host": "[%key:common::config_flow::data::host%]",
+          "password": "[%key:common::config_flow::data::password%]"
+        },
+        "data_description": {
+          "host": "IP address of the Connectbox modem.",
+          "password": "Admin password for the Connectbox."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
+      "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Update interval (seconds)"
+        },
+        "data_description": {
+          "scan_interval": "How often to poll the modem for new data (30–3600 seconds)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "operational_status": {
+        "name": "Operational status"
+      },
+      "channel_power": {
+        "name": "{prefix} channel {channel_id} power"
+      },
+      "channel_frequency": {
+        "name": "{prefix} channel {channel_id} frequency"
+      },
+      "channel_snr": {
+        "name": "{prefix} channel {channel_id} SNR"
+      },
+      "channel_modulation": {
+        "name": "{prefix} channel {channel_id} modulation"
+      },
+      "channel_locked": {
+        "name": "{prefix} channel {channel_id} lock status"
+      }
+    }
+  },
+  "exceptions": {
+    "auth_failed": {
+      "message": "Authentication failed. Please re-authenticate."
+    },
+    "communication_error": {
+      "message": "Error communicating with the Connectbox: {error}"
+    }
+  }
+}

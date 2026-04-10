@@ -1,0 +1,179 @@
+# Quality Scale for Connectbox DOCSIS Monitor
+# https://developers.home-assistant.io/docs/core/integration-quality-scale/
+rules:
+  # Bronze
+  action-setup:
+    status: exempt
+    comment: Integration does not provide service actions.
+  appropriate-polling:
+    status: done
+    comment: Default 60s interval, configurable 30–3600s via options flow.
+  brands:
+    status: exempt
+    comment: Custom integration distributed via HACS; not in HA core brands registry.
+  common-modules:
+    status: done
+    comment: api.py, coordinator.py, entity.py separate concerns cleanly.
+  config-flow-test-coverage:
+    status: done
+    comment: test_config_flow.py covers user/reauth/reconfigure/options and all error paths.
+  config-flow:
+    status: done
+    comment: >
+      UI config flow with data_description for all fields.
+      ConfigEntry.data stores host+password, ConfigEntry.options stores scan_interval.
+  dependency-transparency:
+    status: done
+    comment: No external PyPI dependencies; uses aiohttp bundled with HA.
+  docs-actions:
+    status: exempt
+    comment: Integration does not provide service actions.
+  docs-high-level-description:
+    status: done
+    comment: README describes the Connectbox modem and integration purpose.
+  docs-installation-instructions:
+    status: done
+    comment: README provides HACS and manual installation steps.
+  docs-removal-instructions:
+    status: done
+    comment: README describes standard removal via UI.
+  entity-event-setup:
+    status: exempt
+    comment: No event subscriptions; data comes from polling coordinator.
+  entity-unique-id:
+    status: done
+    comment: All entities use entry_id + direction + channel_id + key as unique ID.
+  has-entity-name:
+    status: done
+    comment: _attr_has_entity_name = True in ConnectboxEntity base class.
+  runtime-data:
+    status: done
+    comment: entry.runtime_data = coordinator in async_setup_entry.
+  test-before-configure:
+    status: done
+    comment: _async_validate() calls async_validate_credentials() before creating entry.
+  test-before-setup:
+    status: done
+    comment: async_config_entry_first_refresh() verifies connectivity during setup.
+  unique-config-entry:
+    status: done
+    comment: async_set_unique_id(host) + _abort_if_unique_id_configured().
+
+  # Silver
+  action-exceptions:
+    status: exempt
+    comment: Integration does not provide service actions.
+  config-entry-unloading:
+    status: done
+    comment: async_unload_entry forwards platform unloading.
+  docs-configuration-parameters:
+    status: done
+    comment: README documents scan_interval option with range.
+  docs-installation-parameters:
+    status: done
+    comment: README documents host and password parameters.
+  entity-unavailable:
+    status: done
+    comment: Coordinator entity pattern marks entities unavailable when update fails.
+  integration-owner:
+    status: done
+    comment: "@k3mpaxl in manifest.json codeowners."
+  log-when-unavailable:
+    status: done
+    comment: Coordinator logs UpdateFailed once; HA core handles retry logging.
+  parallel-updates:
+    status: done
+    comment: PARALLEL_UPDATES = 0 in sensor.py (coordinator-based).
+  reauthentication-flow:
+    status: done
+    comment: async_step_reauth + async_step_reauth_confirm in config_flow.py.
+  test-coverage:
+    status: done
+    comment: >
+      Tests cover api.py, config_flow.py, __init__.py, coordinator.py,
+      sensor.py, and diagnostics.py.
+
+  # Gold
+  devices:
+    status: done
+    comment: DeviceInfo with identifiers, manufacturer, model in entity.py.
+  diagnostics:
+    status: done
+    comment: diagnostics.py with password redaction and full channel data.
+  discovery-update-info:
+    status: exempt
+    comment: No discovery; modem uses fixed IP address.
+  discovery:
+    status: exempt
+    comment: >
+      Connectbox modems have a fixed IP (192.168.100.1) and no mDNS/SSDP/DHCP
+      discovery mechanism. Manual configuration is the only option.
+  docs-data-update:
+    status: done
+    comment: README describes the full login→fetch→logout polling cycle.
+  docs-examples:
+    status: done
+    comment: README provides automation YAML examples for signal monitoring and alerts.
+  docs-known-limitations:
+    status: done
+    comment: README documents single-session limit, poll duration, and scope.
+  docs-supported-devices:
+    status: done
+    comment: README lists Compal Connectbox models.
+  docs-supported-functions:
+    status: done
+    comment: README provides entity table with all sensor types and directions.
+  docs-troubleshooting:
+    status: done
+    comment: README has troubleshooting table with common issues and solutions.
+  docs-use-cases:
+    status: done
+    comment: README describes signal monitoring, alerting, and upstream power tracking.
+  dynamic-devices:
+    status: exempt
+    comment: Single modem device; no dynamic device addition.
+  entity-category:
+    status: done
+    comment: SNR, modulation, locked use EntityCategory.DIAGNOSTIC.
+  entity-device-class:
+    status: done
+    comment: Frequency sensor uses SensorDeviceClass.FREQUENCY.
+  entity-disabled-by-default:
+    status: done
+    comment: Modulation and lock status sensors have entity_registry_enabled_default=False.
+  entity-translations:
+    status: done
+    comment: strings.json + translations/en.json + translations/de.json.
+  exception-translations:
+    status: done
+    comment: auth_failed and communication_error in strings.json exceptions.
+  icon-translations:
+    status: done
+    comment: icons.json maps each sensor translation_key to an MDI icon.
+  reconfiguration-flow:
+    status: done
+    comment: async_step_reconfigure in config_flow.py.
+  repair-issues:
+    status: exempt
+    comment: >
+      No scenarios requiring repair issues; auth failures trigger reauth flow,
+      connection failures trigger retry.
+  stale-devices:
+    status: exempt
+    comment: Single device per entry; device is removed when entry is removed.
+
+  # Platinum
+  async-dependency:
+    status: done
+    comment: Uses aiohttp (async); no blocking I/O.
+  inject-websession:
+    status: exempt
+    comment: >
+      Cannot use HA's shared websession because the Connectbox requires
+      CookieJar(unsafe=True) for IP-address cookie handling, and each poll
+      needs an isolated session (modem allows only one concurrent login).
+  strict-typing:
+    status: done
+    comment: >
+      All modules use type annotations. Custom integration — no .strict-typing
+      file required (that is a HA core mechanism).
