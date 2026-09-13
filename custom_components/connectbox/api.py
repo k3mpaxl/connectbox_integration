@@ -1,18 +1,19 @@
 """API client for the Connectbox integration.
 
-Communicates with the Compal Connectbox (Vodafone Station) JSON REST API
-at ``/api/v1/``.
+Communicates with either of two known Connectbox/Vodafone Station firmware
+families, auto-detected from the login page:
 
-Authentication protocol (reverse-engineered from ``/js/login.js``):
+* **Compal** — JSON REST API under ``/api/v1/`` (see ``_CompalMixin``).
+* **ARRIS/CommScope** — PHP endpoints under ``/php/`` with an
+  AES-CCM-encrypted login (see ``_ArrisMixin``).
+
+Both share the same one-concurrent-admin-session model, so each poll does a
+full login → fetch → logout cycle on an isolated ``aiohttp.ClientSession``
+with ``CookieJar(unsafe=True)`` (required because the modem is addressed by
+IP, and a *safe* cookie jar silently drops cookies for IP-address hosts).
+
+Compal login sequence (reverse-engineered from ``/js/login.js``):
 ------------------------------------------------------------------------
-
-The modem allows **one concurrent admin session**.  Each API poll therefore
-performs a full login → fetch → logout cycle using an isolated
-``aiohttp.ClientSession`` with ``CookieJar(unsafe=True)`` (required
-because the modem is addressed by IP, and a *safe* cookie jar silently
-drops cookies for IP-address hosts).
-
-Login sequence (``submitFun`` in login.js):
 
 1. ``GET /`` — obtain a ``PHPSESSID`` session cookie.
 2. Set cookie ``cwd=No`` (suppresses the "change default password" popup).
@@ -51,6 +52,37 @@ Login sequence (``submitFun`` in login.js):
    without this call subsequent API requests return empty data.
 7. ``GET /api/v1/sta_docsis_status`` — the actual DOCSIS channel data.
 8. ``POST /api/v1/session/logout`` — release the session.
+
+ARRIS login sequence (reverse-engineered from ``base_95x.js`` /
+``sjclCrypto.js``, verified against a live device):
+------------------------------------------------------------------------
+
+1. ``GET /`` — obtain a ``PHPSESSID`` cookie and the login page's embedded
+   ``mySalt`` / ``myIv`` / ``currentSessionId`` (hex strings).
+2. Derive ``key = PBKDF2-SHA256(password, mySalt, 1000 iters, 128 bits)``
+   (raw bytes, not hex).
+3. Encrypt ``{"Password": "<password>", "Nonce": "<currentSessionId>"}``
+   (UTF-8 bytes) with AES-128-CCM using ``key``, nonce ``myIv`` and
+   associated data ``b"loginPassword"``, 128-bit tag. sjcl's CCM mode is
+   the standard NIST construction, byte-identical to
+   ``cryptography``'s ``AESCCM``.
+4. ``POST /php/ajaxSet_Password.php`` (JSON body)
+   ``{"EncryptData": "<hex ciphertext>", "Name": "admin",
+   "AuthData": "loginPassword"}``.
+   Response: ``{"p_status": "...", "p_waitTime": N, "encryptData": "..."}``.
+   ``p_status == "Lockout"`` means too many failed attempts;
+   ``"Default"`` or a status containing ``"Match"`` means success (the
+   modem's own client shows a change-password nag for ``"Default"``, but
+   still grants a real session).
+5. Decrypt ``encryptData`` (same key/nonce, associated data ``b"nonce"``)
+   to get the CSRF nonce, sent as the ``csrfNonce`` header on every
+   subsequent request.
+6. ``GET /`` again, then ``GET /?status_docsis&mid=StatusDocsis`` — the
+   modem ties the session to this exact page-navigation sequence; skipping
+   it (or going straight to the data endpoint) gets a "session lost" 400.
+7. ``GET /php/status_docsis_data.php`` — HTML fragment with the channel
+   data embedded as ``json_dsData``/``json_usData`` JS array literals.
+8. ``POST /php/logout.php`` — release the session.
 """
 
 from __future__ import annotations
@@ -58,11 +90,14 @@ from __future__ import annotations
 import asyncio
 import binascii
 import hashlib
+import json
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
 import aiohttp
 import yarl
+from cryptography.hazmat.primitives.ciphers.aead import AESCCM
 
 from .const import LOGGER
 
@@ -136,6 +171,11 @@ class ConnectboxApiClient:
         self._host = host
         self._password = password
         self._base_url = f"http://{host}"
+        self._protocol: str | None = None  # "compal" | "arris"
+        # ARRIS-only session state, set by _async_login_arris.
+        self._arris_key: bytes | None = None
+        self._arris_iv: str | None = None
+        self._arris_csrf_nonce: str | None = None
 
     @property
     def host(self) -> str:
@@ -175,6 +215,12 @@ class ConnectboxApiClient:
         """Run the full login → fetch → parse cycle."""
         await self._async_login(session)
 
+        if self._protocol == "arris":
+            return await self._async_fetch_arris(session)
+        return await self._async_fetch_compal(session)
+
+    async def _async_fetch_compal(self, session: aiohttp.ClientSession) -> DocsisStatus:
+        """Fetch DOCSIS status via the Compal ``/api/v1/`` REST endpoint."""
         try:
             async with asyncio.timeout(TIMEOUT):
                 resp = await session.get(
@@ -195,28 +241,98 @@ class ConnectboxApiClient:
                 f"Connection error fetching DOCSIS status from {self._host}: {err}"
             ) from err
 
-        return _parse_docsis_data(raw.get("data") or {})
+        return _parse_docsis_data_compal(raw.get("data") or {})
 
-    async def _async_login(self, session: aiohttp.ClientSession) -> None:
-        """Authenticate with the Connectbox.
+    async def _async_fetch_arris(self, session: aiohttp.ClientSession) -> DocsisStatus:
+        """Fetch DOCSIS status from the ARRIS/CommScope ``/php/`` firmware.
 
-        Implements the full login sequence documented in the module
-        docstring (steps 1-6).
+        The session is tied to this exact page-navigation sequence (see
+        module docstring, ARRIS step 6-7): a bare GET to the data endpoint
+        without first "visiting" the surrounding pages is rejected with a
+        "session lost" response, even with a valid csrfNonce.
         """
         try:
-            # Step 1: Obtain PHPSESSID cookie.
+            async with asyncio.timeout(TIMEOUT):
+                resp = await session.get(
+                    self._base_url,
+                    headers={**_HEADERS, "Referer": f"{self._base_url}/?status_docsis&mid=StatusDocsis"},
+                )
+                operational = _extract_js_var(await resp.text(), "_ga.modemConnectionStatus")
             async with asyncio.timeout(TIMEOUT):
                 await session.get(
+                    f"{self._base_url}/?status_docsis&mid=StatusDocsis",
+                    headers={**_HEADERS, "Referer": f"{self._base_url}/"},
+                )
+            async with asyncio.timeout(TIMEOUT):
+                resp = await session.get(
+                    f"{self._base_url}/php/status_docsis_data.php",
+                    headers={
+                        **_HEADERS,
+                        "Referer": f"{self._base_url}/?status_docsis&mid=StatusDocsis",
+                        "csrfNonce": self._arris_csrf_nonce or "",
+                    },
+                )
+                if resp.status != 200:
+                    raise ConnectboxConnectionError(
+                        f"DOCSIS status request failed: HTTP {resp.status}"
+                    )
+                body = await resp.text()
+        except TimeoutError as err:
+            raise ConnectboxTimeoutError(
+                f"Timeout fetching DOCSIS status from {self._host}"
+            ) from err
+        except aiohttp.ClientError as err:
+            raise ConnectboxConnectionError(
+                f"Connection error fetching DOCSIS status from {self._host}: {err}"
+            ) from err
+
+        if "json_dsData" not in body:
+            raise ConnectboxConnectionError(
+                "Connectbox session was lost while fetching DOCSIS status"
+            )
+        return _parse_docsis_data_arris(body, operational)
+
+    async def _async_login(self, session: aiohttp.ClientSession) -> None:
+        """Authenticate with the Connectbox, auto-detecting the firmware.
+
+        Compal firmware serves an ``/api/v1/`` REST API; ARRIS/CommScope
+        firmware serves ``/php/`` endpoints with an AES-CCM-encrypted
+        login (identified by the ``encryptflag`` marker on the login
+        page). See the module docstring for both full sequences.
+        """
+        try:
+            # Step 1: Obtain PHPSESSID cookie and inspect the login page.
+            async with asyncio.timeout(TIMEOUT):
+                resp = await session.get(
                     self._base_url,
                     headers={**_HEADERS, "Referer": f"{self._base_url}/"},
                 )
+                home_html = await resp.text()
 
             # Step 2: Set cwd=No cookie (suppresses password-change popup).
             session.cookie_jar.update_cookies(
                 {"cwd": "No"},
                 response_url=yarl.URL(self._base_url),
             )
+        except TimeoutError as err:
+            raise ConnectboxTimeoutError(
+                f"Timeout during login to {self._host}"
+            ) from err
+        except aiohttp.ClientError as err:
+            raise ConnectboxConnectionError(
+                f"Connection error communicating with {self._host}: {err}"
+            ) from err
 
+        if "encryptflag" in home_html:
+            self._protocol = "arris"
+            await self._async_login_arris(session, home_html)
+        else:
+            self._protocol = "compal"
+            await self._async_login_compal(session)
+
+    async def _async_login_compal(self, session: aiohttp.ClientSession) -> None:
+        """Complete the Compal login (steps 3-6 of the module docstring)."""
+        try:
             # Step 3: Request salts. logout=true terminates other sessions
             # to prevent MSG_LOGIN_150 ("user already logged in").
             async with asyncio.timeout(TIMEOUT):
@@ -229,7 +345,7 @@ class ConnectboxApiClient:
                     },
                     headers={**_HEADERS, "Referer": f"{self._base_url}/"},
                 )
-                salt_data = await resp.json(content_type=None)
+                salt_data = await _async_read_json(resp)
 
             if salt_data.get("error") != "ok":
                 msg = salt_data.get("message", "")
@@ -260,7 +376,7 @@ class ConnectboxApiClient:
                     data={"username": "admin", "password": login_password},
                     headers={**_HEADERS, "Referer": f"{self._base_url}/"},
                 )
-                result = await resp.json(content_type=None)
+                result = await _async_read_json(resp)
 
             if not isinstance(result, dict) or result.get("error") != "ok":
                 msg = result.get("message", "") if isinstance(result, dict) else ""
@@ -307,12 +423,98 @@ class ConnectboxApiClient:
                 f"Connection error communicating with {self._host}: {err}"
             ) from err
 
+    async def _async_login_arris(
+        self, session: aiohttp.ClientSession, home_html: str
+    ) -> None:
+        """Complete the ARRIS/CommScope AES-CCM login.
+
+        See the module docstring (ARRIS steps 2-5) for the protocol.
+        """
+        salt = _extract_js_var(home_html, "mySalt")
+        iv = _extract_js_var(home_html, "myIv")
+        nonce = _extract_js_var(home_html, "currentSessionId")
+        if not salt or not iv or not nonce:
+            raise ConnectboxConnectionError(
+                "Could not find login encryption parameters on the Connectbox login page"
+            )
+
+        key = hashlib.pbkdf2_hmac(
+            "sha256", self._password.encode("utf-8"), bytes.fromhex(salt), 1000, 16
+        )
+        js_data = '{"Password": "' + self._password + '", "Nonce": "' + nonce + '"}'
+        aesccm = AESCCM(key, tag_length=16)
+        try:
+            encrypt_data = aesccm.encrypt(
+                bytes.fromhex(iv), js_data.encode("utf-8"), b"loginPassword"
+            )
+        except Exception as err:
+            raise ConnectboxConnectionError(f"Failed to encrypt login payload: {err}") from err
+
+        try:
+            async with asyncio.timeout(TIMEOUT):
+                resp = await session.post(
+                    f"{self._base_url}/php/ajaxSet_Password.php",
+                    json={
+                        "EncryptData": binascii.hexlify(encrypt_data).decode(),
+                        "Name": "admin",
+                        "AuthData": "loginPassword",
+                    },
+                    headers={
+                        **_HEADERS,
+                        "Content-Type": "application/json",
+                        "Origin": self._base_url,
+                        "Referer": f"{self._base_url}/",
+                        "csrfNonce": "undefined",
+                    },
+                )
+                result = await _async_read_json(resp)
+        except TimeoutError as err:
+            raise ConnectboxTimeoutError(
+                f"Timeout during login to {self._host}"
+            ) from err
+        except aiohttp.ClientError as err:
+            raise ConnectboxConnectionError(
+                f"Connection error communicating with {self._host}: {err}"
+            ) from err
+
+        status = result.get("p_status", "") if isinstance(result, dict) else ""
+        if status == "Lockout":
+            raise ConnectboxConnectionError(
+                "Connectbox has temporarily locked out logins after too many "
+                "failed attempts"
+            )
+        if status != "Default" and "Match" not in status:
+            raise ConnectboxAuthenticationError("Invalid credentials for the Connectbox")
+        if status == "Default":
+            LOGGER.info(
+                "Connectbox still uses its default admin password; "
+                "consider changing it in the modem's web interface"
+            )
+
+        try:
+            csrf_nonce = aesccm.decrypt(
+                bytes.fromhex(iv), bytes.fromhex(result["encryptData"]), b"nonce"
+            ).decode()
+        except Exception as err:
+            raise ConnectboxConnectionError(
+                f"Failed to decrypt Connectbox login response: {err}"
+            ) from err
+
+        self._arris_key = key
+        self._arris_iv = iv
+        self._arris_csrf_nonce = csrf_nonce
+
     async def _async_logout(self, session: aiohttp.ClientSession) -> None:
         """Best-effort logout — always called in a finally block."""
+        url = (
+            f"{self._base_url}/php/logout.php"
+            if self._protocol == "arris"
+            else f"{self._base_url}/api/v1/session/logout"
+        )
         try:
             async with asyncio.timeout(TIMEOUT):
                 await session.post(
-                    f"{self._base_url}/api/v1/session/logout",
+                    url,
                     data={},
                     headers={**_HEADERS, "Referer": f"{self._base_url}/"},
                 )
@@ -323,6 +525,22 @@ class ConnectboxApiClient:
 # ------------------------------------------------------------------
 # Pure helpers (module-level)
 # ------------------------------------------------------------------
+
+
+async def _async_read_json(resp: aiohttp.ClientResponse) -> Any:
+    """Parse a response as JSON, raising ConnectboxConnectionError on failure.
+
+    The modem returns a plain HTML error page (e.g. on HTTP 404/401,
+    which happens during a lockout or when the API path is unreachable)
+    instead of JSON when a request is rejected. Without this, that would
+    crash with an unhandled JSONDecodeError instead of a clear error.
+    """
+    try:
+        return await resp.json(content_type=None)
+    except (aiohttp.ContentTypeError, json.JSONDecodeError) as err:
+        raise ConnectboxConnectionError(
+            f"Unexpected response from Connectbox (HTTP {resp.status}): {err}"
+        ) from err
 
 
 def _pbkdf2_hash(password: str, salt: str) -> str:
@@ -353,7 +571,88 @@ def _parse_value(value: str) -> float:
         return 0.0
 
 
-def _parse_docsis_data(data: dict[str, Any]) -> DocsisStatus:
+def _extract_js_var(html: str, name: str) -> str:
+    """Extract a ``[var ]<name> = '<value>';`` string literal from a page."""
+    match = re.search(rf"(?:var\s+)?{re.escape(name)}\s*=\s*'([^']*)'", html)
+    return match.group(1) if match else ""
+
+
+def _coerce_number(value: Any) -> float:
+    """Coerce a value like ``'135~324'``, ``'7.2/67.2'`` or ``42`` to float.
+
+    ARRIS firmware channel data mixes numeric JSON values (e.g.
+    ``39.6``) with strings for ranges (``'135~324'`` MHz for OFDM) and
+    dual power readings (``'7.2/67.2'`` dBmV). Only the first component
+    is meaningful for our purposes.
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+    if not value:
+        return 0.0
+    first = re.split(r"[~/]", str(value))[0]
+    return _parse_value(first)
+
+
+def _parse_docsis_data_arris(body: str, operational: str = "") -> DocsisStatus:
+    """Parse an ARRIS/CommScope ``status_docsis_data.php`` response.
+
+    The response is an HTML fragment embedding the channel lists as JS
+    array literals: ``json_dsData = [...]; json_usData = [...];``.
+    ``operational`` comes from the surrounding page's
+    ``_ga.modemConnectionStatus`` (the data endpoint itself doesn't
+    include it).
+    """
+    status = DocsisStatus(operational=operational or "Unknown")
+
+    ds_match = re.search(r"json_dsData\s*=\s*(\[.*?\]);", body, re.DOTALL)
+    us_match = re.search(r"json_usData\s*=\s*(\[.*?\]);", body, re.DOTALL)
+
+    if ds_match:
+        for ch in json.loads(ds_match.group(1)):
+            channel_type = ch.get("ChannelType", "")
+            channel_id = str(ch.get("ChannelID", ""))
+            status.downstream.append(
+                DocsisChannel(
+                    channel_id=(
+                        f"OFDM-{channel_id}" if channel_type == "OFDM" else channel_id
+                    ),
+                    direction="downstream",
+                    channel_type=channel_type,
+                    frequency_mhz=_coerce_number(ch.get("Frequency")),
+                    power_dbmv=_coerce_number(ch.get("PowerLevel")),
+                    snr_db=_coerce_number(ch.get("SNRLevel")),
+                    modulation=ch.get("Modulation", ""),
+                    locked=ch.get("LockStatus", ""),
+                )
+            )
+
+    if us_match:
+        for ch in json.loads(us_match.group(1)):
+            channel_type = ch.get("ChannelType", "")
+            channel_id = str(ch.get("ChannelID", ""))
+            status.upstream.append(
+                DocsisChannel(
+                    channel_id=(
+                        f"OFDMA-{channel_id}" if channel_type == "OFDMA" else channel_id
+                    ),
+                    direction="upstream",
+                    channel_type=channel_type,
+                    frequency_mhz=_coerce_number(ch.get("Frequency")),
+                    power_dbmv=_coerce_number(ch.get("PowerLevel")),
+                    modulation=ch.get("Modulation", ""),
+                    locked=ch.get("LockStatus", ""),
+                )
+            )
+
+    LOGGER.debug(
+        "Parsed %d downstream and %d upstream channels",
+        len(status.downstream),
+        len(status.upstream),
+    )
+    return status
+
+
+def _parse_docsis_data_compal(data: dict[str, Any]) -> DocsisStatus:
     """Parse raw DOCSIS JSON into a typed :class:`DocsisStatus`.
 
     The Connectbox returns four channel lists:
